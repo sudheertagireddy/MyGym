@@ -247,7 +247,7 @@ struct FooterBarView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            ForEach([BottomTab.home, .schedule, .checkIn, .account], id: \ .self) { tab in
+            ForEach([BottomTab.home, .schedule, .checkIn, .account], id: \.self) { tab in
                 Button(action: { selectedTab = tab }) {
                     VStack(spacing: 6) {
                         Image(systemName: tab.icon)
