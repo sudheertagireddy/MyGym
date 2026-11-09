@@ -16,7 +16,7 @@ struct ContentView: View {
 
     var body: some View {
         if isLoggedIn {
-            HomeDashboardView()
+            StaffAccessDashboardView(isLoggedIn: $isLoggedIn)
         } else {
             loginView
         }
@@ -121,6 +121,13 @@ struct ContentView: View {
                 .opacity((isLoading || email.isEmpty || password.isEmpty) ? 0.65 : 1.0)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 18)
+
+                Text("Prototype only • sign-in is simulated")
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundColor(.gray)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 12)
 
                 HStack {
                     Rectangle().frame(height: 1).foregroundColor(.gray)
@@ -240,7 +247,7 @@ struct FooterBarView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            ForEach([BottomTab.home, .schedule, .checkIn, .account], id: \ .self) { tab in
+            ForEach([BottomTab.home, .schedule, .checkIn, .account], id: \.self) { tab in
                 Button(action: { selectedTab = tab }) {
                     VStack(spacing: 6) {
                         Image(systemName: tab.icon)
@@ -621,6 +628,296 @@ struct AccountRow: View {
                 .foregroundColor(.black)
         }
         .padding(.vertical, 8)
+    }
+}
+
+
+enum AccessIncidentFilter: String, CaseIterable, Identifiable {
+    case all = "All"
+    case needsReview = "Needs review"
+    case reviewed = "Reviewed"
+
+    var id: String { rawValue }
+}
+
+enum AccessIncidentStatus: String {
+    case needsReview = "Needs review"
+    case reviewed = "Reviewed"
+
+    var tint: Color {
+        switch self {
+        case .needsReview: return .orange
+        case .reviewed: return .green
+        }
+    }
+}
+
+struct AccessIncident: Identifiable {
+    let id = UUID()
+    let occurredAt: Date?
+    let door: String
+    let method: String
+    let summary: String
+    let source: String
+    var status: AccessIncidentStatus
+
+    static let initialReports = [
+        AccessIncident(
+            occurredAt: nil,
+            door: "Main entrance",
+            method: "Phone check-in",
+            summary: "The entry was treated as sauna access and was denied.",
+            source: "Member report • verify against reader logs",
+            status: .needsReview
+        )
+    ]
+}
+
+struct StaffAccessDashboardView: View {
+    @Binding var isLoggedIn: Bool
+    @State private var incidents = AccessIncident.initialReports
+    @State private var selectedFilter: AccessIncidentFilter = .all
+    @State private var showingLogForm = false
+
+    private var filteredIncidents: [AccessIncident] {
+        switch selectedFilter {
+        case .all:
+            return incidents
+        case .needsReview:
+            return incidents.filter { $0.status == .needsReview }
+        case .reviewed:
+            return incidents.filter { $0.status == .reviewed }
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Access reliability")
+                            .font(.system(size: 30, weight: .bold))
+                            .foregroundColor(.black)
+                        Text("Staff console • Prototype")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.gray)
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("34")
+                            .font(.system(size: 38, weight: .bold))
+                            .foregroundColor(.black)
+                        Text("Failed scans reported last month")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.black)
+                        Text("Manager-reported total • not yet verified against reader logs")
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(20)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundColor(.blue)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("No door system is connected")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.black)
+                            Text("This prototype does not control doors. New notes stay on this device for this session only.")
+                                .font(.system(size: 13, weight: .regular))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.blue.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Reported issues")
+                                .font(.system(size: 21, weight: .bold))
+                                .foregroundColor(.black)
+                            Text("Review the report before treating it as a reader-log event.")
+                                .font(.system(size: 13, weight: .regular))
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer(minLength: 8)
+                        Button {
+                            showingLogForm = true
+                        } label: {
+                            Label("Log issue", systemImage: "plus")
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+
+                    Picker("Filter incidents", selection: $selectedFilter) {
+                        ForEach(AccessIncidentFilter.allCases) { filter in
+                            Text(filter.rawValue).tag(filter)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    if filteredIncidents.isEmpty {
+                        ContentUnavailableView(
+                            "No matching reports",
+                            systemImage: "checkmark.circle",
+                            description: Text("Try another filter or log an access issue.")
+                        )
+                    } else {
+                        ForEach(filteredIncidents) { incident in
+                            AccessIncidentCard(incident: incident) {
+                                markReviewed(incident)
+                            }
+                        }
+                    }
+                }
+                .padding(20)
+            }
+            .background(Color(red: 0.96, green: 0.97, blue: 0.98))
+            .navigationTitle("Gym Ops")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Sign out") {
+                        isLoggedIn = false
+                    }
+                }
+            }
+            .sheet(isPresented: $showingLogForm) {
+                LogAccessIssueView { incident in
+                    incidents.insert(incident, at: 0)
+                    selectedFilter = .all
+                    showingLogForm = false
+                }
+            }
+        }
+    }
+
+    private func markReviewed(_ incident: AccessIncident) {
+        guard let index = incidents.firstIndex(where: { $0.id == incident.id }) else { return }
+        incidents[index].status = .reviewed
+    }
+}
+
+struct AccessIncidentCard: View {
+    let incident: AccessIncident
+    let onMarkReviewed: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(incident.door)
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundColor(.black)
+                    Text(incident.method)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                Text(incident.status.rawValue)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(incident.status.tint)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(incident.status.tint.opacity(0.12))
+                    .clipShape(Capsule())
+            }
+
+            Text(incident.summary)
+                .font(.system(size: 14, weight: .regular))
+                .foregroundColor(.black)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(incident.source)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.secondary)
+
+            if let occurredAt = incident.occurredAt {
+                Text(occurredAt.formatted(date: .abbreviated, time: .shortened))
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundColor(.secondary)
+            } else {
+                Text("Date not recorded")
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundColor(.secondary)
+            }
+
+            if incident.status == .needsReview {
+                Button(action: onMarkReviewed) {
+                    Label("Mark reviewed", systemImage: "checkmark.circle")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+}
+
+struct LogAccessIssueView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var door = ""
+    @State private var method = "Phone check-in"
+    @State private var summary = ""
+
+    let onSave: (AccessIncident) -> Void
+    private let methods = ["Phone check-in", "Key tag", "Staff report", "Other"]
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Where did it happen?") {
+                    TextField("Door or area", text: $door)
+                    Picker("Entry method", selection: $method) {
+                        ForEach(methods, id: \.self) { value in
+                            Text(value)
+                        }
+                    }
+                }
+
+                Section("What happened?") {
+                    TextField("Describe the issue", text: $summary, axis: .vertical)
+                        .lineLimit(3...6)
+                }
+
+                Section {
+                    Text("Do not include member names or private details. This prototype does not save reports after the session ends.")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .navigationTitle("Log access issue")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        let incident = AccessIncident(
+                            occurredAt: Date(),
+                            door: door.trimmingCharacters(in: .whitespacesAndNewlines),
+                            method: method,
+                            summary: summary.trimmingCharacters(in: .whitespacesAndNewlines),
+                            source: "Manually logged • local prototype",
+                            status: .needsReview
+                        )
+                        onSave(incident)
+                        dismiss()
+                    }
+                    .disabled(door.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
     }
 }
 
