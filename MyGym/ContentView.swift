@@ -1,923 +1,849 @@
-//
-//  ContentView.swift
-//  MyGym
-//
-//  Created by Sudheer Reddy Tagireddy on 6/29/26.
-//
-
 import SwiftUI
 
+private enum AppColors {
+    static let ink = Color(red: 0.08, green: 0.11, blue: 0.17)
+    static let blue = Color(red: 0.18, green: 0.39, blue: 0.96)
+    static let muted = Color(red: 0.43, green: 0.47, blue: 0.54)
+    static let canvas = Color(red: 0.96, green: 0.97, blue: 0.985)
+    static let green = Color(red: 0.12, green: 0.58, blue: 0.38)
+    static let orange = Color(red: 0.80, green: 0.42, blue: 0.08)
+}
+
 struct ContentView: View {
-    @State private var email: String = ""
-    @State private var password: String = ""
-    @State private var showPassword: Bool = false
-    @State private var isLoading: Bool = false
-    @State private var isLoggedIn: Bool = false
+    @State private var store = GymStore()
+    @State private var enteredWorkspace = false
 
     var body: some View {
-        if isLoggedIn {
-            StaffAccessDashboardView(isLoggedIn: $isLoggedIn)
-        } else {
-            loginView
+        Group {
+            if enteredWorkspace {
+                GymWorkspaceView(store: store) {
+                    enteredWorkspace = false
+                }
+            } else {
+                DemoWelcomeView { enteredWorkspace = true }
+            }
         }
+        .preferredColorScheme(.light)
     }
+}
 
-    private var loginView: some View {
+private struct DemoWelcomeView: View {
+    let onContinue: () -> Void
+
+    var body: some View {
         ZStack {
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 0.08, green: 0.09, blue: 0.14),
-                    Color(red: 0.13, green: 0.14, blue: 0.2)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Welcome Back")
-                        .font(.system(size: 30, weight: .bold))
-                        .foregroundColor(.white)
-
-                    Text("Sign in to your account")
-                        .font(.system(size: 16, weight: .regular))
-                        .foregroundColor(.gray)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 24)
-                .padding(.top, 60)
-                .padding(.bottom, 38)
-
-                VStack(spacing: 20) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label("Email", systemImage: "envelope.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-
-                        TextField("Enter your email", text: $email)
-                            .keyboardType(.emailAddress)
-                            .autocorrectionDisabled()
-                            .textContentType(.emailAddress)
-                            .padding(12)
-                            .background(Color(red: 0.2, green: 0.2, blue: 0.25))
-                            .cornerRadius(10)
-                            .foregroundColor(.white)
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label("Password", systemImage: "lock.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-
-                        HStack {
-                            if showPassword {
-                                TextField("Enter your password", text: $password)
-                                    .autocorrectionDisabled()
-                                    .textContentType(.password)
-                            } else {
-                                SecureField("Enter your password", text: $password)
-                                    .textContentType(.password)
-                            }
-
-                            Button(action: { showPassword.toggle() }) {
-                                Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                        .padding(12)
-                        .background(Color(red: 0.2, green: 0.2, blue: 0.25))
-                        .cornerRadius(10)
-                    }
-
-                    HStack {
-                        Spacer()
-                        Button(action: {}) {
-                            Text("Forgot Password?")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.blue)
-                        }
-                    }
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 28)
-
-                Button(action: handleLogin) {
-                    if isLoading {
-                        ProgressView()
-                            .progressViewStyle(.circular)
-                            .tint(.white)
-                    } else {
-                        Text("Sign In")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
-                .background(Color.blue)
-                .cornerRadius(10)
-                .disabled(isLoading || email.isEmpty || password.isEmpty)
-                .opacity((isLoading || email.isEmpty || password.isEmpty) ? 0.65 : 1.0)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 18)
-
-                Text("Prototype only • sign-in is simulated")
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundColor(.gray)
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 12)
-
-                HStack {
-                    Rectangle().frame(height: 1).foregroundColor(.gray)
-                    Text("or")
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundColor(.gray)
-                    Rectangle().frame(height: 1).foregroundColor(.gray)
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 18)
-
-                VStack(spacing: 12) {
-                    Button(action: {}) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "applelogo")
-                                .font(.system(size: 18, weight: .semibold))
-                            Text("Sign in with Apple")
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 48)
-                        .foregroundColor(.white)
-                        .background(Color(red: 0.18, green: 0.18, blue: 0.22))
-                        .cornerRadius(10)
-                    }
-
-                    Button(action: {}) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "globe")
-                                .font(.system(size: 18, weight: .semibold))
-                            Text("Sign in with Google")
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 48)
-                        .foregroundColor(.white)
-                        .background(Color(red: 0.18, green: 0.18, blue: 0.22))
-                        .cornerRadius(10)
-                    }
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 24)
-
+            LinearGradient(colors: [AppColors.ink, Color(red: 0.13, green: 0.19, blue: 0.30)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                .ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 0) {
                 Spacer()
-
-                HStack(spacing: 4) {
-                    Text("Don't have an account?")
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundColor(.gray)
-
-                    Button(action: {}) {
-                        Text("Sign up")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.blue)
-                    }
-                }
-                .padding(.bottom, 36)
-            }
-        }
-        .navigationBarHidden(true)
-    }
-
-    private func handleLogin() {
-        isLoading = true
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            isLoading = false
-            isLoggedIn = true
-        }
-    }
-}
-
-enum BottomTab: String {
-    case home
-    case schedule
-    case checkIn
-    case account
-
-    var title: String {
-        switch self {
-        case .home: return "Home"
-        case .schedule: return "Schedule"
-        case .checkIn: return "Check-in"
-        case .account: return "Account"
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .home: return "house.fill"
-        case .schedule: return "calendar"
-        case .checkIn: return "checkmark.seal.fill"
-        case .account: return "person.fill"
-        }
-    }
-}
-
-struct HomeDashboardView: View {
-    @State private var selectedTab: BottomTab = .home
-
-    var body: some View {
-        ZStack(alignment: .bottom) {
-            TabContentView(selectedTab: selectedTab)
-                .padding(.bottom, 82)
-
-            FooterBarView(selectedTab: $selectedTab)
-                .padding(.horizontal, 14)
-                .padding(.bottom, 18)
-        }
-        .background(Color(white: 0.96))
-        .ignoresSafeArea()
-    }
-}
-
-struct FooterBarView: View {
-    @Binding var selectedTab: BottomTab
-
-    var body: some View {
-        HStack(spacing: 0) {
-            ForEach([BottomTab.home, .schedule, .checkIn, .account], id: \.self) { tab in
-                Button(action: { selectedTab = tab }) {
-                    VStack(spacing: 6) {
-                        Image(systemName: tab.icon)
-                            .font(.system(size: 18, weight: .semibold))
-                        Text(tab.title)
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 64)
-                    .foregroundColor(selectedTab == tab ? .blue : .gray)
-                }
-            }
-        }
-        .frame(height: 74)
-        .background(Color.white)
-        .cornerRadius(18)
-        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: -4)
-    }
-}
-
-struct TabContentView: View {
-    let selectedTab: BottomTab
-
-    var body: some View {
-        switch selectedTab {
-        case .home:
-            HomeView()
-        case .schedule:
-            ScheduleView()
-        case .checkIn:
-            CheckInView()
-        case .account:
-            AccountView()
-        }
-    }
-}
-
-struct HomeView: View {
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Good morning")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.gray)
-                    Text("Alex Johnson")
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundColor(.black)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 20)
-                .padding(.top, 50)
-
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Membership")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.gray)
-
+                Image(systemName: "dumbbell.fill")
+                    .font(.system(size: 30, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 64, height: 64)
+                    .background(AppColors.blue, in: RoundedRectangle(cornerRadius: 18))
+                    .padding(.bottom, 26)
+                Text("MYGYM OPS")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .tracking(2.5)
+                    .foregroundStyle(.white.opacity(0.65))
+                Text("Run your gym.\nNot the paperwork.")
+                    .font(.system(size: 38, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .padding(.top, 12)
+                Text("A staff workspace for members, classes, check-ins, and access reports.")
+                    .font(.system(size: 17))
+                    .foregroundStyle(.white.opacity(0.72))
+                    .lineSpacing(4)
+                    .padding(.top, 14)
+                Button(action: onContinue) {
                     HStack {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Gold Access")
-                                .font(.system(size: 22, weight: .bold))
-                                .foregroundColor(.white)
-                            Text("Valid until 12 Aug 2027")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.white.opacity(0.8))
-                        }
+                        Text("Open demo workspace")
                         Spacer()
-                        Image(systemName: "dumbbell.fill")
-                            .font(.system(size: 28))
-                            .foregroundColor(.white)
+                        Image(systemName: "arrow.right")
                     }
-                    .padding(20)
-                    .background(
-                        LinearGradient(
-                            gradient: Gradient(colors: [Color(red: 0.21, green: 0.68, blue: 0.95), Color(red: 0.15, green: 0.39, blue: 0.95)]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .cornerRadius(20)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 20)
+                    .frame(height: 56)
+                    .background(AppColors.blue, in: RoundedRectangle(cornerRadius: 15))
                 }
-                .padding(.horizontal, 20)
-
-                HStack(spacing: 12) {
-                    StatCard(title: "Workouts", value: "12", accent: .blue)
-                    StatCard(title: "Streak", value: "8 days", accent: .green)
-                }
-                .padding(.horizontal, 20)
-
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Today’s plan")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.black)
-
-                    WorkoutRow(title: "Strength Training", time: "07:30 AM", detail: "Upper body • 45 mins")
-                    WorkoutRow(title: "HIIT Circuit", time: "12:15 PM", detail: "Cardio • 30 mins")
-                    WorkoutRow(title: "Mobility Flow", time: "06:00 PM", detail: "Recovery • 20 mins")
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(20)
-                .background(Color.white)
-                .cornerRadius(22)
-                .padding(.horizontal, 20)
-
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Progress")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.black)
-
-                    HStack {
-                        ProgressRing(progress: 0.72, title: "Goal", value: "72%")
-                        ProgressRing(progress: 0.58, title: "Recovery", value: "58%")
-                        ProgressRing(progress: 0.85, title: "Energy", value: "85%")
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(20)
-                .background(Color.white)
-                .cornerRadius(22)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 20)
-            }
-        }
-    }
-}
-
-struct ScheduleView: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Schedule")
-                .font(.system(size: 32, weight: .bold))
-                .foregroundColor(.black)
-                .padding(.top, 60)
-                .padding(.horizontal, 20)
-
-            ScrollView {
-                VStack(spacing: 16) {
-                    ScheduleCard(day: "Mon", date: "20", title: "Power Lift", coach: "Coach Mark", time: "6:30 AM")
-                    ScheduleCard(day: "Tue", date: "21", title: "Yoga Flow", coach: "Coach Maya", time: "8:00 AM")
-                    ScheduleCard(day: "Wed", date: "22", title: "HIIT Blast", coach: "Coach Leo", time: "5:45 PM")
-                    ScheduleCard(day: "Thu", date: "23", title: "Core Focus", coach: "Coach Sara", time: "7:00 AM")
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 20)
-            }
-        }
-    }
-}
-
-struct CheckInView: View {
-    var body: some View {
-        VStack(spacing: 24) {
-            Text("Check-in")
-                .font(.system(size: 32, weight: .bold))
-                .foregroundColor(.black)
-                .padding(.top, 60)
-                .padding(.horizontal, 20)
-
-            VStack(spacing: 18) {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 70))
-                    .foregroundColor(.blue)
-
-                Text("Ready to check in?")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.black)
-
-                Text("Tap below to log your visit and start your workout session.")
-                    .font(.system(size: 16, weight: .regular))
-                    .foregroundColor(.gray)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-
-                Button(action: {}) {
-                    Text("Check In")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                }
-                .background(Color.blue)
-                .cornerRadius(14)
-                .padding(.horizontal, 20)
+                .padding(.top, 32)
+                Label("Demo mode • local device data only", systemImage: "info.circle")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.64))
+                    .padding(.top, 16)
+                Spacer()
             }
             .padding(28)
-            .background(Color.white)
-            .cornerRadius(22)
-            .padding(.horizontal, 20)
-
-            Spacer()
         }
     }
 }
 
-struct AccountView: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Account")
-                .font(.system(size: 32, weight: .bold))
-                .foregroundColor(.black)
-                .padding(.top, 60)
-                .padding(.horizontal, 20)
-
-            VStack(spacing: 16) {
-                HStack(spacing: 16) {
-                    Circle()
-                        .frame(width: 70, height: 70)
-                        .foregroundColor(Color(red: 0.82, green: 0.9, blue: 1))
-                        .overlay(Image(systemName: "person.fill").foregroundColor(.blue).font(.system(size: 30)))
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Alex Johnson")
-                            .font(.system(size: 22, weight: .bold))
-                        Text("Premium Member")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.gray)
-                    }
-                }
-                .padding(.bottom, 12)
-
-                AccountRow(title: "Email", value: "alex@mygym.com")
-                AccountRow(title: "Phone", value: "+1 (555) 123-4567")
-                AccountRow(title: "Membership", value: "Gold")
-                AccountRow(title: "Location", value: "Downtown Studio")
-            }
-            .padding(20)
-            .background(Color.white)
-            .cornerRadius(22)
-            .padding(.horizontal, 20)
-
-            Spacer()
-        }
-    }
-}
-
-struct StatCard: View {
-    let title: String
-    let value: String
-    let accent: Color
+private struct GymWorkspaceView: View {
+    let store: GymStore
+    let onSignOut: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.gray)
-            Text(value)
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(.black)
+        TabView {
+            DashboardScreen(store: store)
+                .tabItem { Label("Overview", systemImage: "square.grid.2x2.fill") }
+            MembersScreen(store: store)
+                .tabItem { Label("Members", systemImage: "person.2.fill") }
+            ClassesScreen(store: store)
+                .tabItem { Label("Classes", systemImage: "calendar") }
+            AccessScreen(store: store)
+                .tabItem { Label("Access", systemImage: "door.left.hand.open") }
+            MoreScreen(store: store, onSignOut: onSignOut)
+                .tabItem { Label("More", systemImage: "ellipsis.circle.fill") }
         }
-        .frame(maxWidth: .infinity)
-        .padding(18)
-        .background(accent.opacity(0.12))
-        .cornerRadius(18)
+        .tint(AppColors.blue)
     }
 }
 
-struct WorkoutRow: View {
-    let title: String
-    let time: String
-    let detail: String
+private struct DashboardScreen: View {
+    let store: GymStore
+    @State private var showingCheckIn = false
 
-    var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            ZStack {
-                Circle()
-                    .frame(width: 38, height: 38)
-                    .foregroundColor(.blue.opacity(0.12))
-                Image(systemName: "timer")
-                    .foregroundColor(.blue)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.black)
-                Text(detail)
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundColor(.gray)
-            }
-
-            Spacer()
-
-            Text(time)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.gray)
-        }
-        .padding(.vertical, 8)
-    }
-}
-
-struct ProgressRing: View {
-    let progress: Double
-    let title: String
-    let value: String
-
-    var body: some View {
-        VStack(spacing: 10) {
-            ZStack {
-                Circle()
-                    .stroke(Color.gray.opacity(0.2), lineWidth: 10)
-                    .frame(width: 62, height: 62)
-
-                Circle()
-                    .trim(from: 0, to: progress)
-                    .stroke(Color.blue, style: StrokeStyle(lineWidth: 10, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                    .frame(width: 62, height: 62)
-
-                Text(value)
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.black)
-            }
-
-            Text(title)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.gray)
-        }
-        .frame(maxWidth: .infinity)
-    }
-}
-
-struct ScheduleCard: View {
-    let day: String
-    let date: String
-    let title: String
-    let coach: String
-    let time: String
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            VStack(spacing: 4) {
-                Text(day)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.gray)
-                Text(date)
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.black)
-            }
-            .frame(width: 56)
-            .padding(.vertical, 12)
-            .background(Color.gray.opacity(0.08))
-            .cornerRadius(16)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(title)
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(.black)
-                Text("with \(coach)")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.gray)
-            }
-
-            Spacer()
-
-            Text(time)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.blue)
-        }
-        .padding(16)
-        .background(Color.white)
-        .cornerRadius(18)
-    }
-}
-
-struct AccountRow: View {
-    let title: String
-    let value: String
-
-    var body: some View {
-        HStack {
-            Text(title)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.gray)
-            Spacer()
-            Text(value)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.black)
-        }
-        .padding(.vertical, 8)
-    }
-}
-
-
-enum AccessIncidentFilter: String, CaseIterable, Identifiable {
-    case all = "All"
-    case needsReview = "Needs review"
-    case reviewed = "Reviewed"
-
-    var id: String { rawValue }
-}
-
-enum AccessIncidentStatus: String {
-    case needsReview = "Needs review"
-    case reviewed = "Reviewed"
-
-    var tint: Color {
-        switch self {
-        case .needsReview: return .orange
-        case .reviewed: return .green
-        }
-    }
-}
-
-struct AccessIncident: Identifiable {
-    let id = UUID()
-    let occurredAt: Date?
-    let door: String
-    let method: String
-    let summary: String
-    let source: String
-    var status: AccessIncidentStatus
-
-    static let initialReports = [
-        AccessIncident(
-            occurredAt: nil,
-            door: "Main entrance",
-            method: "Phone check-in",
-            summary: "The entry was treated as sauna access and was denied.",
-            source: "Member report • verify against reader logs",
-            status: .needsReview
-        )
-    ]
-}
-
-struct StaffAccessDashboardView: View {
-    @Binding var isLoggedIn: Bool
-    @State private var incidents = AccessIncident.initialReports
-    @State private var selectedFilter: AccessIncidentFilter = .all
-    @State private var showingLogForm = false
-
-    private var filteredIncidents: [AccessIncident] {
-        switch selectedFilter {
-        case .all:
-            return incidents
-        case .needsReview:
-            return incidents.filter { $0.status == .needsReview }
-        case .reviewed:
-            return incidents.filter { $0.status == .reviewed }
-        }
-    }
+    private var activeMembers: Int { store.members.filter { $0.status == .active }.count }
+    private var pastDueMembers: Int { store.members.filter { $0.status == .pastDue }.count }
+    private var upcoming: [GymClass] { Array(store.classes.sorted { $0.startsAt < $1.startsAt }.prefix(3)) }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Access reliability")
-                            .font(.system(size: 30, weight: .bold))
-                            .foregroundColor(.black)
-                        Text("Staff console • Prototype")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.gray)
-                    }
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("34")
-                            .font(.system(size: 38, weight: .bold))
-                            .foregroundColor(.black)
-                        Text("Failed scans reported last month")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.black)
-                        Text("Manager-reported total • not yet verified against reader logs")
-                            .font(.system(size: 13, weight: .regular))
-                            .foregroundColor(.secondary)
+                VStack(alignment: .leading, spacing: 22) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day()))
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(AppColors.muted)
+                        Text("Gym overview")
+                            .font(.system(size: 30, weight: .bold, design: .rounded))
+                            .foregroundStyle(AppColors.ink)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
-                    HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: "info.circle.fill")
-                            .foregroundColor(.blue)
+                    HStack(spacing: 12) {
+                        MetricCard(title: "Members", value: "\(store.members.count)", detail: "\(activeMembers) active", symbol: "person.2.fill", tint: AppColors.blue)
+                        MetricCard(title: "Past due", value: "\(pastDueMembers)", detail: "Memberships", symbol: "exclamationmark.circle.fill", tint: AppColors.orange)
+                    }
+                    HStack(spacing: 12) {
+                        MetricCard(title: "Check-ins", value: "\(store.checkIns.count)", detail: "Staff demo logs", symbol: "checkmark.seal.fill", tint: AppColors.green)
+                        MetricCard(title: "Classes", value: "\(store.classes.count)", detail: "On the schedule", symbol: "calendar", tint: AppColors.ink)
+                    }
+
+                    HStack(alignment: .top, spacing: 11) {
+                        Image(systemName: "info.circle.fill").foregroundStyle(AppColors.blue)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("No door system is connected")
+                            Text("Local demo workspace")
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.black)
-                            Text("This prototype does not control doors. New notes stay on this device for this session only.")
-                                .font(.system(size: 13, weight: .regular))
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(AppColors.ink)
+                            Text("Changes save on this device. No real accounts, payments, cloud sync, or door readers are connected.")
+                                .font(.system(size: 13))
+                                .foregroundStyle(AppColors.muted)
                         }
                     }
                     .padding(14)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.blue.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(AppColors.blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
 
                     HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Reported issues")
-                                .font(.system(size: 21, weight: .bold))
-                                .foregroundColor(.black)
-                            Text("Review the report before treating it as a reader-log event.")
-                                .font(.system(size: 13, weight: .regular))
-                                .foregroundColor(.secondary)
-                        }
-                        Spacer(minLength: 8)
-                        Button {
-                            showingLogForm = true
-                        } label: {
-                            Label("Log issue", systemImage: "plus")
-                                .font(.system(size: 14, weight: .semibold))
-                        }
-                        .buttonStyle(.borderedProminent)
+                        Text("Quick actions")
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundStyle(AppColors.ink)
+                        Spacer()
                     }
-
-                    Picker("Filter incidents", selection: $selectedFilter) {
-                        ForEach(AccessIncidentFilter.allCases) { filter in
-                            Text(filter.rawValue).tag(filter)
-                        }
+                    Button { showingCheckIn = true } label: {
+                        Label("Record a staff check-in", systemImage: "checkmark.seal.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(16)
+                            .background(.white, in: RoundedRectangle(cornerRadius: 14))
                     }
-                    .pickerStyle(.segmented)
+                    .foregroundStyle(AppColors.ink)
 
-                    if filteredIncidents.isEmpty {
-                        ContentUnavailableView(
-                            "No matching reports",
-                            systemImage: "checkmark.circle",
-                            description: Text("Try another filter or log an access issue.")
-                        )
-                    } else {
-                        ForEach(filteredIncidents) { incident in
-                            AccessIncidentCard(incident: incident) {
-                                markReviewed(incident)
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Upcoming classes")
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundStyle(AppColors.ink)
+                        if upcoming.isEmpty {
+                            Text("No classes scheduled yet.").foregroundStyle(AppColors.muted)
+                        } else {
+                            ForEach(upcoming) { item in
+                                ClassSummaryRow(item: item)
+                                if item.id != upcoming.last?.id { Divider() }
                             }
                         }
                     }
+                    .padding(18)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.white, in: RoundedRectangle(cornerRadius: 16))
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Access reliability")
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundStyle(AppColors.ink)
+                        Text("\(store.managerReportedFailedScans) failed scans reported last month")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(AppColors.ink)
+                        Text("Manager-reported total • not verified against reader logs")
+                            .font(.system(size: 12))
+                            .foregroundStyle(AppColors.muted)
+                    }
+                    .padding(18)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.white, in: RoundedRectangle(cornerRadius: 16))
                 }
                 .padding(20)
             }
-            .background(Color(red: 0.96, green: 0.97, blue: 0.98))
-            .navigationTitle("Gym Ops")
+            .background(AppColors.canvas)
+            .navigationTitle("MyGym Ops")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Sign out") {
-                        isLoggedIn = false
-                    }
-                }
-            }
-            .sheet(isPresented: $showingLogForm) {
-                LogAccessIssueView { incident in
-                    incidents.insert(incident, at: 0)
-                    selectedFilter = .all
-                    showingLogForm = false
-                }
-            }
+            .sheet(isPresented: $showingCheckIn) { CheckInPickerScreen(store: store) }
         }
-    }
-
-    private func markReviewed(_ incident: AccessIncident) {
-        guard let index = incidents.firstIndex(where: { $0.id == incident.id }) else { return }
-        incidents[index].status = .reviewed
     }
 }
 
-struct AccessIncidentCard: View {
-    let incident: AccessIncident
-    let onMarkReviewed: () -> Void
+private struct MetricCard: View {
+    let title: String
+    let value: String
+    let detail: String
+    let symbol: String
+    let tint: Color
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(incident.door)
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(.black)
-                    Text(incident.method)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-                Text(incident.status.rawValue)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(incident.status.tint)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(incident.status.tint.opacity(0.12))
-                    .clipShape(Capsule())
-            }
-
-            Text(incident.summary)
-                .font(.system(size: 14, weight: .regular))
-                .foregroundColor(.black)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text(incident.source)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.secondary)
-
-            if let occurredAt = incident.occurredAt {
-                Text(occurredAt.formatted(date: .abbreviated, time: .shortened))
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundColor(.secondary)
-            } else {
-                Text("Date not recorded")
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundColor(.secondary)
-            }
-
-            if incident.status == .needsReview {
-                Button(action: onMarkReviewed) {
-                    Label("Mark reviewed", systemImage: "checkmark.circle")
-                        .font(.system(size: 14, weight: .semibold))
-                }
-                .buttonStyle(.bordered)
+            Image(systemName: symbol).font(.system(size: 17, weight: .semibold)).foregroundStyle(tint)
+            Text(value).font(.system(size: 27, weight: .bold, design: .rounded)).foregroundStyle(AppColors.ink)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(AppColors.ink)
+                Text(detail).font(.system(size: 11)).foregroundStyle(AppColors.muted)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
+        .padding(15)
+        .background(.white, in: RoundedRectangle(cornerRadius: 16))
     }
 }
 
-struct LogAccessIssueView: View {
+private struct ClassSummaryRow: View {
+    let item: GymClass
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(spacing: 2) {
+                Text(item.startsAt.formatted(.dateTime.hour().minute()))
+                    .font(.system(size: 13, weight: .bold))
+                Text(item.startsAt.formatted(.dateTime.weekday(.abbreviated)))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(AppColors.muted)
+            }
+            .frame(width: 55)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(item.title).font(.system(size: 14, weight: .semibold)).foregroundStyle(AppColors.ink)
+                Text("\(item.instructor) • \(item.location)").font(.system(size: 12)).foregroundStyle(AppColors.muted)
+            }
+            Spacer()
+            Text("\(item.bookedMemberIDs.count)/\(item.capacity)")
+                .font(.system(size: 12, weight: .semibold)).foregroundStyle(AppColors.blue)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+private struct MembersScreen: View {
+    let store: GymStore
+    @State private var searchText = ""
+    @State private var showingAddMember = false
+    @State private var selectedMember: GymMember?
+
+    private var filteredMembers: [GymMember] {
+        guard !searchText.isEmpty else { return store.members }
+        return store.members.filter { $0.name.localizedCaseInsensitiveContains(searchText) || $0.email.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(filteredMembers) { member in
+                        Button { selectedMember = member } label: { MemberRow(member: member) }
+                            .buttonStyle(.plain)
+                    }
+                } header: {
+                    Text("\(store.members.count) members • demo records")
+                }
+            }
+            .searchable(text: $searchText, prompt: "Name or email")
+            .navigationTitle("Members")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingAddMember = true } label: { Image(systemName: "plus") }
+                        .accessibilityLabel("Add member")
+                }
+            }
+            .sheet(isPresented: $showingAddMember) { AddMemberScreen(store: store) }
+            .sheet(item: $selectedMember) { member in MemberDetailScreen(store: store, memberID: member.id) }
+        }
+    }
+}
+
+private struct MemberRow: View {
+    let member: GymMember
+    var body: some View {
+        HStack(spacing: 12) {
+            Circle().fill(AppColors.blue.opacity(0.12)).frame(width: 42, height: 42)
+                .overlay(Text(initials).font(.system(size: 14, weight: .bold)).foregroundStyle(AppColors.blue))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(member.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(AppColors.ink)
+                Text("\(member.planName) • \(member.visitsThisMonth) visits this month")
+                    .font(.system(size: 12)).foregroundStyle(AppColors.muted)
+            }
+            Spacer()
+            StatusPill(title: member.status.rawValue, tint: member.status == .active ? AppColors.green : AppColors.orange)
+        }
+        .padding(.vertical, 5)
+        .contentShape(Rectangle())
+    }
+    private var initials: String {
+        member.name.split(separator: " ").prefix(2).compactMap(\.first).map(String.init).joined()
+    }
+}
+
+private struct StatusPill: View {
+    let title: String
+    let tint: Color
+    var body: some View {
+        Text(title).font(.system(size: 11, weight: .semibold)).foregroundStyle(tint)
+            .padding(.horizontal, 9).padding(.vertical, 5)
+            .background(tint.opacity(0.1), in: Capsule())
+    }
+}
+
+private struct AddMemberScreen: View {
+    let store: GymStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var email = ""
+    @State private var phone = ""
+    @State private var planName = "Core"
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Member details") {
+                    TextField("Full name", text: $name)
+                    TextField("Email", text: $email).keyboardType(.emailAddress).textInputAutocapitalization(.never)
+                    TextField("Phone", text: $phone).keyboardType(.phonePad)
+                }
+                Section("Membership") {
+                    Picker("Plan", selection: $planName) {
+                        ForEach(store.plans) { plan in Text(plan.name).tag(plan.name) }
+                    }
+                    Text("New demo members start as Active. No payment is collected.")
+                        .font(.footnote).foregroundStyle(AppColors.muted)
+                }
+            }
+            .navigationTitle("Add member")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        store.addMember(GymMember(name: name.trimmingCharacters(in: .whitespacesAndNewlines), email: email.trimmingCharacters(in: .whitespacesAndNewlines), phone: phone.trimmingCharacters(in: .whitespacesAndNewlines), planName: planName, status: .active))
+                        dismiss()
+                    }.disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+}
+
+private struct MemberDetailScreen: View {
+    let store: GymStore
+    let memberID: UUID
+    private var member: GymMember? { store.members.first { $0.id == memberID } }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                if let member {
+                    Section("Contact") {
+                        LabeledContent("Name", value: member.name)
+                        LabeledContent("Email", value: member.email.isEmpty ? "Not added" : member.email)
+                        LabeledContent("Phone", value: member.phone.isEmpty ? "Not added" : member.phone)
+                    }
+                    Section("Membership") {
+                        LabeledContent("Plan", value: member.planName)
+                        Picker("Status", selection: Binding(get: { self.member?.status ?? .active }, set: { store.updateMemberStatus(memberID, to: $0) })) {
+                            ForEach(MembershipStatus.allCases) { status in Text(status.rawValue).tag(status) }
+                        }
+                        LabeledContent("Visits this month", value: "\(member.visitsThisMonth)")
+                        LabeledContent("Joined", value: member.joinedAt.formatted(date: .abbreviated, time: .omitted))
+                    }
+                } else {
+                    ContentUnavailableView("Member not found", systemImage: "person.crop.circle.badge.questionmark")
+                }
+            }
+            .navigationTitle(member?.name ?? "Member")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+private struct ClassesScreen: View {
+    let store: GymStore
+    @State private var showingAddClass = false
+    @State private var selectedClass: GymClass?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Class schedule • local demo") {
+                    ForEach(store.classes.sorted { $0.startsAt < $1.startsAt }) { item in
+                        Button { selectedClass = item } label: {
+                            ClassSummaryRow(item: item)
+                        }.buttonStyle(.plain)
+                    }
+                }
+            }
+            .navigationTitle("Classes")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingAddClass = true } label: { Image(systemName: "plus") }
+                        .accessibilityLabel("Add class")
+                }
+            }
+            .sheet(isPresented: $showingAddClass) { AddClassScreen(store: store) }
+            .sheet(item: $selectedClass) { item in ClassDetailScreen(store: store, classID: item.id) }
+        }
+    }
+}
+
+private struct AddClassScreen: View {
+    let store: GymStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var title = ""
+    @State private var instructor = ""
+    @State private var location = "Studio A"
+    @State private var startsAt = Date().addingTimeInterval(3600)
+    @State private var duration = 45
+    @State private var capacity = 12
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Class") {
+                    TextField("Class name", text: $title)
+                    TextField("Instructor", text: $instructor)
+                    TextField("Location", text: $location)
+                    DatePicker("Starts", selection: $startsAt, in: Date()..., displayedComponents: [.date, .hourAndMinute])
+                }
+                Section("Capacity") {
+                    Stepper("Duration: \(duration) min", value: $duration, in: 15...180, step: 5)
+                    Stepper("Spots: \(capacity)", value: $capacity, in: 1...100)
+                }
+            }
+            .navigationTitle("Add class")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        store.addClass(GymClass(title: title.trimmingCharacters(in: .whitespacesAndNewlines), instructor: instructor.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Staff" : instructor, location: location, startsAt: startsAt, durationMinutes: duration, capacity: capacity))
+                        dismiss()
+                    }.disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+}
+
+private struct ClassDetailScreen: View {
+    let store: GymStore
+    let classID: UUID
+    @State private var showingBooking = false
+    private var item: GymClass? { store.classes.first { $0.id == classID } }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if let item {
+                    Section("Details") {
+                        LabeledContent("Instructor", value: item.instructor)
+                        LabeledContent("Location", value: item.location)
+                        LabeledContent("Starts", value: item.startsAt.formatted(date: .abbreviated, time: .shortened))
+                        LabeledContent("Duration", value: "\(item.durationMinutes) minutes")
+                        LabeledContent("Capacity", value: "\(item.bookedMemberIDs.count) / \(item.capacity)")
+                    }
+                    Section("Roster") {
+                        let booked = store.members.filter { item.bookedMemberIDs.contains($0.id) }
+                        if booked.isEmpty { Text("No bookings yet").foregroundStyle(AppColors.muted) }
+                        ForEach(booked) { member in Text(member.name) }
+                        if item.bookedMemberIDs.count < item.capacity {
+                            Button { showingBooking = true } label: { Label("Add member to class", systemImage: "person.badge.plus") }
+                        }
+                    }
+                }
+            }
+            .navigationTitle(item?.title ?? "Class")
+            .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showingBooking) { AddBookingScreen(store: store, classID: classID) }
+        }
+    }
+}
+
+private struct AddBookingScreen: View {
+    let store: GymStore
+    let classID: UUID
+    @Environment(\.dismiss) private var dismiss
+    private var currentClass: GymClass? { store.classes.first { $0.id == classID } }
+    private var eligibleMembers: [GymMember] {
+        store.members.filter { $0.status == .active && !(currentClass?.bookedMemberIDs.contains($0.id) ?? true) }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if eligibleMembers.isEmpty {
+                    ContentUnavailableView("No eligible members", systemImage: "person.2", description: Text("Add an active member or check the class capacity."))
+                }
+                ForEach(eligibleMembers) { member in
+                    Button {
+                        _ = store.book(member.id, into: classID)
+                        dismiss()
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(member.name).foregroundStyle(AppColors.ink)
+                                Text(member.planName).font(.caption).foregroundStyle(AppColors.muted)
+                            }
+                            Spacer()
+                            Image(systemName: "plus.circle.fill").foregroundStyle(AppColors.blue)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Add to roster")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
+        }
+    }
+}
+
+private struct AccessScreen: View {
+    let store: GymStore
+    @State private var filter: IncidentStatus? = nil
+    @State private var showingLogIssue = false
+
+    private var displayed: [AccessIssue] {
+        guard let filter else { return store.incidents }
+        return store.incidents.filter { $0.status == filter }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("\(store.managerReportedFailedScans)")
+                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                            .foregroundStyle(AppColors.ink)
+                        Text("Failed scans reported last month")
+                            .font(.system(size: 15, weight: .semibold)).foregroundStyle(AppColors.ink)
+                        Text("Manager-reported total • verify against reader logs")
+                            .font(.system(size: 12)).foregroundStyle(AppColors.muted)
+                    }
+                    .padding(.vertical, 6)
+                }
+                Section {
+                    Picker("Filter", selection: $filter) {
+                        Text("All").tag(Optional<IncidentStatus>.none)
+                        ForEach(IncidentStatus.allCases) { status in Text(status.rawValue).tag(Optional(status)) }
+                    }
+                    ForEach(displayed) { issue in
+                        AccessIssueRow(issue: issue) {
+                            store.markIncidentReviewed(issue.id)
+                        }
+                    }
+                    if displayed.isEmpty { Text("No reports match this filter.").foregroundStyle(AppColors.muted) }
+                } header: {
+                    Text("Incident reports • not reader logs")
+                } footer: {
+                    Text("No door hardware is connected. The app does not grant or deny entry.")
+                }
+            }
+            .navigationTitle("Access issues")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingLogIssue = true } label: { Image(systemName: "plus") }
+                        .accessibilityLabel("Log access issue")
+                }
+            }
+            .sheet(isPresented: $showingLogIssue) { AddAccessIssueScreen(store: store) }
+        }
+    }
+}
+
+private struct AccessIssueRow: View {
+    let issue: AccessIssue
+    let onReview: () -> Void
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack {
+                Text(issue.door).font(.system(size: 15, weight: .semibold)).foregroundStyle(AppColors.ink)
+                Spacer()
+                StatusPill(title: issue.status.rawValue, tint: issue.status == .reviewed ? AppColors.green : AppColors.orange)
+            }
+            Text("\(issue.method) • \(issue.reportedAt.formatted(date: .abbreviated, time: .shortened))")
+                .font(.system(size: 12)).foregroundStyle(AppColors.muted)
+            Text(issue.summary).font(.system(size: 14)).foregroundStyle(AppColors.ink)
+            Text(issue.source).font(.system(size: 11, weight: .medium)).foregroundStyle(AppColors.muted)
+            if issue.status == .needsReview {
+                Button(action: onReview) { Label("Mark reviewed", systemImage: "checkmark.circle") }
+                    .font(.system(size: 13, weight: .semibold)).buttonStyle(.bordered)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+}
+
+private struct AddAccessIssueScreen: View {
+    let store: GymStore
     @Environment(\.dismiss) private var dismiss
     @State private var door = ""
     @State private var method = "Phone check-in"
     @State private var summary = ""
-
-    let onSave: (AccessIncident) -> Void
     private let methods = ["Phone check-in", "Key tag", "Staff report", "Other"]
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Where did it happen?") {
+                Section("Where?") {
                     TextField("Door or area", text: $door)
-                    Picker("Entry method", selection: $method) {
-                        ForEach(methods, id: \.self) { value in
-                            Text(value)
-                        }
-                    }
+                    Picker("Entry method", selection: $method) { ForEach(methods, id: \.self) { Text($0) } }
                 }
-
                 Section("What happened?") {
-                    TextField("Describe the issue", text: $summary, axis: .vertical)
-                        .lineLimit(3...6)
+                    TextField("Describe the issue", text: $summary, axis: .vertical).lineLimit(3...6)
                 }
-
                 Section {
-                    Text("Do not include member names or private details. This prototype does not save reports after the session ends.")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
+                    Text("Avoid member names or private details. This demo saves reports on this device only.")
+                        .font(.footnote).foregroundStyle(AppColors.muted)
                 }
             }
             .navigationTitle("Log access issue")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        let incident = AccessIncident(
-                            occurredAt: Date(),
-                            door: door.trimmingCharacters(in: .whitespacesAndNewlines),
-                            method: method,
-                            summary: summary.trimmingCharacters(in: .whitespacesAndNewlines),
-                            source: "Manually logged • local prototype",
-                            status: .needsReview
-                        )
-                        onSave(incident)
+                        store.addIncident(AccessIssue(door: door.trimmingCharacters(in: .whitespacesAndNewlines), method: method, summary: summary.trimmingCharacters(in: .whitespacesAndNewlines), source: "Staff report • local demo"))
                         dismiss()
-                    }
-                    .disabled(door.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }.disabled(door.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }
+    }
+}
+
+private struct MoreScreen: View {
+    let store: GymStore
+    let onSignOut: () -> Void
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Gym operations") {
+                    NavigationLink { AttendanceScreen(store: store) } label: { Label("Check-in log", systemImage: "checkmark.seal") }
+                    NavigationLink { MembershipPlansScreen(store: store) } label: { Label("Membership plans", systemImage: "creditcard") }
+                    NavigationLink { ReportsScreen(store: store) } label: { Label("Reports", systemImage: "chart.bar") }
+                }
+                Section("Workspace") {
+                    NavigationLink { DemoSettingsScreen() } label: { Label("Demo settings", systemImage: "gearshape") }
+                    Button(role: .destructive, action: onSignOut) { Label("Exit demo workspace", systemImage: "rectangle.portrait.and.arrow.right") }
+                }
+                Section {
+                    Text("Prototype only. Do not enter real member or payment data. Authentication, cloud storage, billing, and access hardware are not configured.")
+                        .font(.footnote).foregroundStyle(AppColors.muted)
+                }
+            }
+            .navigationTitle("More")
+        }
+    }
+}
+
+private struct AttendanceScreen: View {
+    let store: GymStore
+    @State private var showingCheckIn = false
+    var body: some View {
+        List {
+            Section {
+                Button { showingCheckIn = true } label: { Label("Record staff check-in", systemImage: "plus.circle.fill") }
+            } footer: {
+                Text("Manual demo log only. This does not scan a phone or communicate with a door reader.")
+            }
+            Section("Recent visits") {
+                if store.checkIns.isEmpty { Text("No check-ins logged yet.").foregroundStyle(AppColors.muted) }
+                ForEach(store.checkIns) { event in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(event.memberName).font(.system(size: 15, weight: .semibold)).foregroundStyle(AppColors.ink)
+                        Text("\(event.occurredAt.formatted(date: .abbreviated, time: .shortened)) • \(event.method)")
+                            .font(.system(size: 12)).foregroundStyle(AppColors.muted)
+                    }
+                    .padding(.vertical, 3)
+                }
+            }
+        }
+        .navigationTitle("Check-in log")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingCheckIn) { CheckInPickerScreen(store: store) }
+    }
+}
+
+private struct CheckInPickerScreen: View {
+    let store: GymStore
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Text("This records a staff-entered visit in the demo. It does not use phone check-in or unlock a door.")
+                        .font(.footnote).foregroundStyle(AppColors.muted)
+                }
+                Section("Choose a member") {
+                    ForEach(store.members.filter { $0.status == .active }) { member in
+                        Button {
+                            store.recordStaffCheckIn(for: member)
+                            dismiss()
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(member.name).foregroundStyle(AppColors.ink)
+                                    Text("\(member.planName) • \(member.visitsThisMonth) visits this month")
+                                        .font(.caption).foregroundStyle(AppColors.muted)
+                                }
+                                Spacer()
+                                Image(systemName: "checkmark.circle").foregroundStyle(AppColors.blue)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Staff check-in")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+        }
+    }
+}
+
+private struct MembershipPlansScreen: View {
+    let store: GymStore
+    @State private var showingAddPlan = false
+    var body: some View {
+        List {
+            Section {
+                Text("Demo prices only. No charges, invoices, or recurring payments are processed.")
+                    .font(.footnote).foregroundStyle(AppColors.muted)
+            }
+            Section("Plans") {
+                ForEach(store.plans) { plan in
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text(plan.name).font(.system(size: 16, weight: .semibold)).foregroundStyle(AppColors.ink)
+                            Spacer()
+                            Text(plan.monthlyPrice, format: .currency(code: "USD"))
+                                .font(.system(size: 15, weight: .bold)).foregroundStyle(AppColors.ink)
+                        }
+                        Text("per month • demo rate").font(.system(size: 11)).foregroundStyle(AppColors.muted)
+                        Text(plan.benefits).font(.system(size: 13)).foregroundStyle(AppColors.muted)
+                        let count = store.members.filter { $0.planName == plan.name }.count
+                        Text("\(count) demo members").font(.system(size: 12, weight: .medium)).foregroundStyle(AppColors.blue)
+                    }
+                    .padding(.vertical, 5)
+                }
+            }
+        }
+        .navigationTitle("Membership plans")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showingAddPlan = true } label: { Image(systemName: "plus") }.accessibilityLabel("Add plan")
+            }
+        }
+        .sheet(isPresented: $showingAddPlan) { AddPlanScreen(store: store) }
+    }
+}
+
+private struct AddPlanScreen: View {
+    let store: GymStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var monthlyPrice = 49.0
+    @State private var benefits = "Gym floor access"
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Plan details") {
+                    TextField("Plan name", text: $name)
+                    TextField("Monthly demo price", value: $monthlyPrice, format: .number).keyboardType(.decimalPad)
+                    TextField("Included benefits", text: $benefits, axis: .vertical).lineLimit(2...4)
+                }
+                Section { Text("This saves a demo plan only. It does not create a billing product.").font(.footnote).foregroundStyle(AppColors.muted) }
+            }
+            .navigationTitle("Add plan")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        store.addPlan(GymPlan(name: name.trimmingCharacters(in: .whitespacesAndNewlines), monthlyPrice: max(0, monthlyPrice), benefits: benefits))
+                        dismiss()
+                    }.disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+}
+
+private struct ReportsScreen: View {
+    let store: GymStore
+    private var active: Int { store.members.filter { $0.status == .active }.count }
+    private var pastDue: Int { store.members.filter { $0.status == .pastDue }.count }
+    private var totalBookings: Int { store.classes.reduce(0) { $0 + $1.bookedMemberIDs.count } }
+    var body: some View {
+        List {
+            Section("Snapshot • demo data") {
+                LabeledContent("Total members", value: "\(store.members.count)")
+                LabeledContent("Active memberships", value: "\(active)")
+                LabeledContent("Past-due memberships", value: "\(pastDue)")
+                LabeledContent("Staff check-in logs", value: "\(store.checkIns.count)")
+                LabeledContent("Class bookings", value: "\(totalBookings)")
+                LabeledContent("Open access reports", value: "\(store.incidents.filter { $0.status == .needsReview }.count)")
+            }
+            Section {
+                Text("This report is calculated from local demo records. It is not financial, tax, attendance-reader, or business-performance reporting.")
+                    .font(.footnote).foregroundStyle(AppColors.muted)
+            }
+        }
+        .navigationTitle("Reports")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct DemoSettingsScreen: View {
+    var body: some View {
+        List {
+            Section("Current workspace") {
+                LabeledContent("Mode", value: "Local demo")
+                LabeledContent("Sign-in", value: "Not configured")
+                LabeledContent("Data storage", value: "This device")
+                LabeledContent("Door readers", value: "Not connected")
+                LabeledContent("Payments", value: "Not connected")
+            }
+            Section {
+                Text("Use sample records only. Before a real gym launch, the app needs secure staff authentication, a backend with access controls and backups, a payment provider, and an approved integration for the gym’s access system.")
+                    .font(.footnote).foregroundStyle(AppColors.muted)
+            }
+        }
+        .navigationTitle("Demo settings")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
